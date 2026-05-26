@@ -54,6 +54,7 @@ def process_batch(a_tf, tau_tf):
     """
     a   = a_tf[:, 0, 0, 0, :, :, 0].numpy()  # [B, 32, 23] complex
     tau = tau_tf[:, 0, 0, :].numpy()          # [B, 23] seconds
+    assert a_tf.shape[-1] == 1, f"Expected num_time_steps=1, got {a_tf.shape[-1]}"
     B   = a.shape[0]
 
     data    = np.zeros((B, 2, N_DELAY, N_FFT_ANGULAR), dtype=np.float32)
@@ -68,6 +69,8 @@ def process_batch(a_tf, tau_tf):
         if max_p > 0:
             threshold = max_p * 10 ** (PATH_THRESHOLD_DB / 10)
             n_paths[b] = int(np.sum(power >= threshold))
+        else:
+            print(f'Warning: sample {b} has zero channel power — skipping path count')
 
         H_angular = np.fft.fft(h, n=N_FFT_ANGULAR, axis=-1)  # [23, 64]
 
