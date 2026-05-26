@@ -19,7 +19,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.cluster import AgglomerativeClustering
 from sklearn.manifold import TSNE
-from scipy.ndimage import zoom
 
 N_SAMPLES  = 5
 PATCH_GRID = 16
@@ -34,8 +33,8 @@ def cluster_sample(reps_256_384, n_paths):
 
 def upsample_labels(labels_256, patch_grid=PATCH_GRID, target=64):
     label_map = labels_256.reshape(patch_grid, patch_grid)
-    scale = target / patch_grid
-    return zoom(label_map.astype(float), scale, order=0).astype(int)
+    scale = target // patch_grid
+    return np.repeat(np.repeat(label_map, scale, axis=0), scale, axis=1)
 
 
 def run_tsne(reps_256_384):
