@@ -52,3 +52,8 @@ resume: True
 
 knn_eval_only: False
 eval_freq: 10
+
+log:
+  print_freq: 547
+  save_freq: 50
+  use_wandb: False
