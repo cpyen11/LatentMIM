@@ -1,9 +1,11 @@
 import os
+import numpy as np
+import torch
 import torch.utils.data as data
 import torchvision.datasets as datasets
 import data_tools
 
-__all__ = ['imagenet', 'imagenet100']
+__all__ = ['imagenet', 'imagenet100', 'csi_cdla']
 
 
 NUM_CLASSES = {
@@ -84,6 +86,27 @@ def imagenet100(data_path, transform, train=True):
     dataset = imagenet(data_path, transform, train=train)
     filter_dataset(dataset, in100_cls_list)
     return dataset
+
+
+class CSICDLADataset(data.Dataset):
+    def __init__(self, data_path, train=True):
+        split = 'train' if train else 'test'
+        self.data    = np.load(os.path.join(data_path, f'{split}_data.npy'))   # [N, 2, 64, 64]
+        self.n_paths = np.load(os.path.join(data_path, f'{split}_paths.npy'))  # [N]
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        x = self.data[idx].astype(np.float32)   # [2, 64, 64]
+        p = np.sqrt(np.mean(x[0] ** 2 + x[1] ** 2))
+        x = x / (p + 1e-8)
+        return torch.from_numpy(x), int(self.n_paths[idx])
+
+
+def csi_cdla(data_path, transform=None, train=True):
+    return CSICDLADataset(data_path, train=train)
+
 
 def load_dataset(dataset, path, transform, train=True):
     return globals()[dataset](path, transform, train)
