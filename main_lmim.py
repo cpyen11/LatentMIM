@@ -120,6 +120,7 @@ def main_worker(local_rank, args):
     model = build_lmim(
         args.encoder,
         patch_size=args.patch_size,
+        in_chans=args.in_chans,
         loss=args.loss,
         grid_size=args.grid_size,
         tau=args.tau,

@@ -10,6 +10,7 @@ dataset: csi_cdla
 data_path: data_gen/csi_cdla
 
 encoder: vit_small
+in_chans: 2
 patch_size: 4
 decoder_depth: 3
 target_depth: 12

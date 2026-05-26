@@ -24,7 +24,7 @@ def _build_mlp(in_dim, out_dim, hidden_dim=4096, num_layers=1, norm=nn.LayerNorm
 class LMIM(nn.Module):
     """ Latent Masked Image Modeling with VisionTransformer backbone
     """
-    def __init__(self, grid_size=14, patch_size=16, patch_gap=0, in_chans=2,
+    def __init__(self, grid_size=14, patch_size=16, patch_gap=0, in_chans=3,
                  embed_dim=1024, num_heads=16, depth=24, target_depth=0, 
                  decoder_embed_dim=512, decoder_depth=3, decoder_num_heads=16,
                  mlp_ratio=4., norm_layer=nn.LayerNorm,
