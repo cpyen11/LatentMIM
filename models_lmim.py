@@ -183,10 +183,12 @@ CFG = {
     'vit_huge':   {'embed_dim': 1280, 'depth': 32, 'num_heads': 16, 'mlp_ratio': 4, 'patch_size': 14},
 }
 
-def build_lmim(backbone, decoder_depth=3, decoder_embed_dim=512, decoder_num_heads=16, **kwargs):
+def build_lmim(backbone, decoder_depth=3, decoder_embed_dim=512, decoder_num_heads=16, patch_size=None, **kwargs):
     cfg = CFG[backbone]
+    if patch_size is None:
+        patch_size = cfg['patch_size']
     model = LMIM(
-        patch_size=cfg['patch_size'], embed_dim=cfg['embed_dim'], depth=cfg['depth'], num_heads=cfg['num_heads'],
+        patch_size=patch_size, embed_dim=cfg['embed_dim'], depth=cfg['depth'], num_heads=cfg['num_heads'],
         decoder_embed_dim=decoder_embed_dim, decoder_depth=decoder_depth, decoder_num_heads=decoder_num_heads,
         mlp_ratio=cfg['mlp_ratio'], norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
     return model

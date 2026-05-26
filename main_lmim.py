@@ -45,6 +45,27 @@ def main(args):
         main_worker(0, args)
 
 
+def build_transforms(args):
+    if args.dataset == 'csi_cdla':
+        return None, None
+
+    train_img_size = args.grid_size * (args.patch_size + args.patch_gap)
+    eval_img_size  = args.grid_size * args.patch_size
+    train_transform = transforms.Compose([
+        transforms.RandomResizedCrop(train_img_size, scale=(args.min_crop, 1.0),
+                                     interpolation=transforms.InterpolationMode.BICUBIC),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])])
+    eval_transform = transforms.Compose([
+        transforms.Resize(int(eval_img_size / 0.875),
+                          interpolation=F.InterpolationMode.BICUBIC),
+        transforms.CenterCrop(eval_img_size),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])])
+    return train_transform, eval_transform
+
+
 def main_worker(local_rank, args):
     misc.init_distributed_mode(local_rank, args)
     device = torch.device('cpu') if not torch.cuda.is_available() else torch.device('cuda')
@@ -62,28 +83,11 @@ def main_worker(local_rank, args):
 
     cudnn.benchmark = True
 
-    # simple augmentation
-    train_img_size = args.grid_size * (args.patch_size + args.patch_gap)
-    train_transform = transforms.Compose([
-        transforms.RandomResizedCrop(train_img_size, scale=(args.min_crop, 1.0),
-                                     interpolation=transforms.InterpolationMode.BICUBIC), 
-        transforms.RandomHorizontalFlip(),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])])
+    train_transform, eval_transform = build_transforms(args)
     db_train = datasets.load_dataset(
-        args.dataset, args.data_path,
-        transform=train_transform,
-        train=True)
-    
-    eval_img_size = args.grid_size * args.patch_size
-    db_eval = datasets.load_dataset(
-        args.dataset, args.data_path,
-        transform=transforms.Compose([
-            transforms.Resize(int(eval_img_size / 0.875), interpolation=F.InterpolationMode.BICUBIC),
-            transforms.CenterCrop(eval_img_size),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-        ]), train=False)
+        args.dataset, args.data_path, transform=train_transform, train=True)
+    db_eval  = datasets.load_dataset(
+        args.dataset, args.data_path, transform=eval_transform,  train=False)
 
     if args.env.distributed:
         sampler_train = torch.utils.data.DistributedSampler(
@@ -115,6 +119,7 @@ def main_worker(local_rank, args):
     # define the model
     model = build_lmim(
         args.encoder,
+        patch_size=args.patch_size,
         loss=args.loss,
         grid_size=args.grid_size,
         tau=args.tau,
