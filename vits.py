@@ -47,14 +47,15 @@ class Patchify:
         assert w % (pw + gap) == 0 and h % (ph + gap) == 0
 
         th, tw = h // (ph + gap), w // (pw + gap)
-        x = imgs.reshape(shape=(bs, 3, th, ph+gap, tw, pw+gap))
+        C = imgs.shape[1]
+        x = imgs.reshape(shape=(bs, C, th, ph+gap, tw, pw+gap))
         x = torch.einsum('nchpwq->nhwpqc', x)
         if gap > 0:
             stx = (torch.randint(0, gap, x.shape[:3]).unsqueeze(-1) + torch.arange(ph)).to(x.device)
             sty = (torch.randint(0, gap, x.shape[:3]).unsqueeze(-1) + torch.arange(pw)).to(x.device)
             x = x.gather(dim=3, index=stx[:, :, :, :, None, None].repeat(1, 1, 1, 1, x.shape[4], x.shape[5]))
             x = x.gather(dim=4, index=sty[:, :, :, None, :, None].repeat(1, 1, 1, x.shape[3], 1, x.shape[5]))
-        x = x.reshape(shape=(bs, th * tw, ph * pw * 3))
+        x = x.reshape(shape=(bs, th * tw, ph * pw * C))
         return x
 
     def unpatchify(self, x):
