@@ -60,17 +60,18 @@ class Patchify:
 
     def unpatchify(self, x):
         """
-        x: (N, L, patch_size**2 *3)
-        imgs: (N, 3, H, W)
+        x: (N, L, patch_size**2 * C)
+        imgs: (N, C, H, W)
         """
         bs = x.shape[0]
         ph, pw = self.patch_size
         gh, gw = self.grid_size
         assert gh * gw == x.shape[1]
 
-        x = x.reshape(shape=(bs, gh, gw, ph, pw, 3))
+        C = x.shape[-1] // (ph * pw)
+        x = x.reshape(shape=(bs, gh, gw, ph, pw, C))
         x = torch.einsum('nhwpqc->nchpwq', x)
-        imgs = x.reshape(shape=(bs, 3, gh * ph, gw * pw))
+        imgs = x.reshape(shape=(bs, C, gh * ph, gw * pw))
         return imgs
 
     def __call__(self, x, gap):
