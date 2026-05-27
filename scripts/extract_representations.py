@@ -27,7 +27,7 @@ def load_model(ckpt_path, device):
     model = build_lmim(
         'vit_small',
         patch_size=4,
-        in_chans=2,
+        in_chans=1,
         grid_size=16,
         loss='infonce_patches',
         tau=0.2,
@@ -52,7 +52,7 @@ def load_model(ckpt_path, device):
 def extract(model, loader, device):
     all_reps = []
     for imgs, _ in loader:
-        imgs = imgs.to(device)                        # [B, 2, 64, 64]
+        imgs = imgs.to(device)                        # [B, 1, 64, 64]
         reps = model.encoder(imgs)                    # [B, 257, 384] (CLS + 256 patches)
         reps = reps[:, 1:, :]                         # drop CLS → [B, 256, 384]
         all_reps.append(reps.cpu().numpy())
