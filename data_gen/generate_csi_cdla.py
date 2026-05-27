@@ -72,7 +72,7 @@ def process_batch(a_tf, tau_tf):
         else:
             print(f'Warning: sample {b} has zero channel power — skipping path count')
 
-        H_angular = np.fft.fft(h, n=N_FFT_ANGULAR, axis=-1)  # [23, 64]
+        H_angular = np.fft.fftshift(np.fft.fft(h, n=N_FFT_ANGULAR, axis=-1), axes=-1)  # [23, 64]
 
         H_grid = np.zeros((N_DELAY, N_FFT_ANGULAR), dtype=complex)
         for l in range(23):
