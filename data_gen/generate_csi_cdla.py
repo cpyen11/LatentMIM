@@ -3,8 +3,8 @@
 Generate CDL-A CSI dataset for LatentMIM training.
 
 Output files (in --out-dir):
-  train_data.npy   [70000, 2, 64, 64] float32   real/imag delay-azimuth
-  test_data.npy    [10000, 2, 64, 64] float32
+  train_data.npy   [70000, 1, 64, 64] float32   dB magnitude delay-azimuth (noise + signal)
+  test_data.npy    [10000, 1, 64, 64] float32
   train_paths.npy  [70000]            int32      dominant path count per sample
   test_paths.npy   [10000]            int32
 """
@@ -43,22 +43,25 @@ def build_arrays():
     return bs_array, ut_array
 
 
-def process_batch(a_tf, tau_tf):
+def process_batch(a_tf, tau_tf, snr_db=20.0, rng=None):
     """
     a_tf:   [B, 1, 1, 1, 32, 23, 1] complex
     tau_tf: [B, 1, 1, 23]            float  (seconds)
 
     Returns:
-      data:    [B, 2, N_DELAY, N_FFT_ANGULAR] float32
+      data:    [B, 1, N_DELAY, N_FFT_ANGULAR] float32  dB magnitude after noise addition
       n_paths: [B]                             int32
     """
     a   = a_tf[:, 0, 0, 0, :, :, 0].numpy()  # [B, 32, 23] complex
     tau = tau_tf[:, 0, 0, :].numpy()          # [B, 23] seconds
     assert a_tf.shape[-1] == 1, f"Expected num_time_steps=1, got {a_tf.shape[-1]}"
     B   = a.shape[0]
+    if rng is None:
+        rng = np.random.default_rng()
 
-    data    = np.zeros((B, 2, N_DELAY, N_FFT_ANGULAR), dtype=np.float32)
+    data    = np.zeros((B, 1, N_DELAY, N_FFT_ANGULAR), dtype=np.float32)
     n_paths = np.zeros(B, dtype=np.int32)
+    snr_linear = 10 ** (snr_db / 10)
 
     for b in range(B):
         h   = a[b].T                           # [23, 32] complex
@@ -80,22 +83,29 @@ def process_batch(a_tf, tau_tf):
             if 0 <= tap < N_DELAY:
                 H_grid[tap] += H_angular[l]
 
-        data[b, 0] = H_grid.real
-        data[b, 1] = H_grid.imag
+        # Add complex AWGN: noise power = peak_bin_power / snr_linear
+        peak_power = np.max(np.abs(H_grid) ** 2)
+        sigma = np.sqrt(peak_power / (2 * snr_linear))
+        noise = sigma * (rng.standard_normal((N_DELAY, N_FFT_ANGULAR)) +
+                         1j * rng.standard_normal((N_DELAY, N_FFT_ANGULAR)))
+        H_noisy = H_grid + noise
+
+        data[b, 0] = 20 * np.log10(np.abs(H_noisy) + 1e-10)
 
     return data, n_paths
 
 
-def generate(num_samples, channel_model, batch_size=64):
-    all_data    = np.zeros((num_samples, 2, N_DELAY, N_FFT_ANGULAR), dtype=np.float32)
+def generate(num_samples, channel_model, batch_size=64, snr_db=20.0):
+    all_data    = np.zeros((num_samples, 1, N_DELAY, N_FFT_ANGULAR), dtype=np.float32)
     all_n_paths = np.zeros(num_samples, dtype=np.int32)
     generated = 0
 
+    rng = np.random.default_rng(0)
     while generated < num_samples:
         bs = min(batch_size, num_samples - generated)
         a, tau = channel_model(batch_size=bs, num_time_steps=1,
                                sampling_frequency=1e9)
-        data, n_paths = process_batch(a, tau)
+        data, n_paths = process_batch(a, tau, snr_db=snr_db, rng=rng)
         all_data[generated:generated + bs]    = data
         all_n_paths[generated:generated + bs] = n_paths
         generated += bs
@@ -109,6 +119,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--out-dir',    default='data_gen/csi_cdla')
     parser.add_argument('--batch-size', type=int, default=64)
+    parser.add_argument('--snr-db',     type=float, default=20.0)
     args = parser.parse_args()
 
     os.makedirs(args.out_dir, exist_ok=True)
@@ -122,8 +133,8 @@ def main():
         min_speed=SPEED, max_speed=SPEED,
     )
 
-    print(f'Generating {N_TOTAL} samples (batch_size={args.batch_size})...')
-    all_data, all_n_paths = generate(N_TOTAL, channel_model, args.batch_size)
+    print(f'Generating {N_TOTAL} samples (batch_size={args.batch_size}, snr_db={args.snr_db})...')
+    all_data, all_n_paths = generate(N_TOTAL, channel_model, args.batch_size, snr_db=args.snr_db)
 
     rng = np.random.default_rng(42)
     idx = rng.permutation(N_TOTAL)

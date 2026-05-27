@@ -98,9 +98,8 @@ class CSICDLADataset(data.Dataset):
         return len(self.data)
 
     def __getitem__(self, idx):
-        x = self.data[idx].astype(np.float32)   # [2, 64, 64]
-        p = np.sqrt(np.mean(x[0] ** 2 + x[1] ** 2))
-        x = x / (p + 1e-8)
+        x = self.data[idx].astype(np.float32)   # [1, 64, 64] dB magnitude
+        x = (x - x.mean()) / (x.std() + 1e-8)  # per-sample standardisation
         return torch.from_numpy(x), int(self.n_paths[idx])
 
 

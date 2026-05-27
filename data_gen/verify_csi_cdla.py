@@ -16,27 +16,28 @@ def main():
     train_paths = np.load(os.path.join(args.data_dir, 'train_paths.npy'))
 
     # Shape checks
-    assert train.shape == (70000, 2, 64, 64), f'bad train shape: {train.shape}'
-    assert test.shape  == (10000, 2, 64, 64), f'bad test shape: {test.shape}'
+    assert train.shape == (70000, 1, 64, 64), f'bad train shape: {train.shape}'
+    assert test.shape  == (10000, 1, 64, 64), f'bad test shape: {test.shape}'
     assert train.dtype == np.float32
     print('Shapes OK')
     print(f'train n_paths: min={train_paths.min()} max={train_paths.max()} '
           f'mean={train_paths.mean():.1f}')
+    print(f'train dB range: min={train[:,0].min():.1f}  max={train[:,0].max():.1f}  '
+          f'mean={train[:,0].mean():.1f}')
 
-    # 3-sample visualisation: magnitude heatmap
+    # 3-sample visualisation: dB magnitude heatmap
     rng = np.random.default_rng(0)
     idxs = rng.choice(len(train), 3, replace=False)
 
     fig, axes = plt.subplots(3, 1, figsize=(8, 10))
     for row, idx in enumerate(idxs):
-        x = train[idx]           # [2, 64, 64]
-        mag = np.sqrt(x[0]**2 + x[1]**2)  # [64, 64]
+        mag_db = train[idx, 0]   # [64, 64] already in dB
         ax = axes[row]
-        im = ax.imshow(mag, aspect='auto', origin='lower', cmap='viridis')
+        im = ax.imshow(mag_db, aspect='auto', origin='lower', cmap='viridis')
         ax.set_xlabel('Azimuth bin')
         ax.set_ylabel('Delay tap')
         ax.set_title(f'Sample {idx}  |  n_paths={train_paths[idx]}')
-        plt.colorbar(im, ax=ax, label='|H|')
+        plt.colorbar(im, ax=ax, label='|H| (dB)')
 
     plt.tight_layout()
     plt.savefig(args.out, dpi=100)
