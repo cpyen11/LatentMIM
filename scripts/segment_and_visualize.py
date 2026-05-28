@@ -56,13 +56,32 @@ def draw_patch_overlay(ax, img_2d, labels, k, cmap):
             ax.add_patch(rect)
 
 
+def k_sweep(reps, test_data, idx, ks=(2, 3, 4, 5), out='scripts/segmentation_ksweep.png'):
+    """One sample image with overlay repeated for each k value."""
+    cmap = plt.get_cmap('tab10')
+    fig, axes = plt.subplots(1, len(ks), figsize=(4 * len(ks), 4))
+    rep = reps[idx]
+    x   = test_data[idx]
+    for ax, k in zip(axes, ks):
+        labels = AgglomerativeClustering(n_clusters=k, linkage='ward').fit_predict(rep)
+        draw_patch_overlay(ax, x[0], labels, k, cmap)
+        ax.set_title(f'k = {k}')
+        ax.set_xlabel('Azimuth bin')
+        ax.set_ylabel('Delay tap')
+    fig.suptitle(f'Sample index {idx} — varying k', y=1.01)
+    plt.tight_layout()
+    plt.savefig(out, dpi=120, bbox_inches='tight')
+    print(f'Saved to {out}')
+
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--reps',  default='scripts/representations.npy')
-    parser.add_argument('--data',  default='data_gen/csi_cdla/test_data.npy')
-    parser.add_argument('--paths', default='data_gen/csi_cdla/test_paths.npy')
-    parser.add_argument('--out',   default='scripts/segmentation.png')
-    parser.add_argument('--seed',  type=int, default=0)
+    parser.add_argument('--reps',       default='scripts/representations.npy')
+    parser.add_argument('--data',       default='data_gen/csi_cdla/test_data.npy')
+    parser.add_argument('--paths',      default='data_gen/csi_cdla/test_paths.npy')
+    parser.add_argument('--out',        default='scripts/segmentation.png')
+    parser.add_argument('--ksweep-out', default='scripts/segmentation_ksweep.png')
+    parser.add_argument('--seed',       type=int, default=0)
     args = parser.parse_args()
 
     reps      = np.load(args.reps)    # [10000, 256, 192]
@@ -108,6 +127,10 @@ def main():
     plt.tight_layout()
     plt.savefig(args.out, dpi=120)
     print(f'Saved to {args.out}')
+
+    reps      = np.load(args.reps)
+    test_data = np.load(args.data)
+    k_sweep(reps, test_data, idx=int(idxs[0]), out=args.ksweep_out)
 
 
 if __name__ == '__main__':
