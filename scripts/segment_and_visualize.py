@@ -25,7 +25,17 @@ N_SAMPLES  = 5
 PATCH_GRID = 16
 PATCH_SIZE = 4        # pixels per patch side
 K_MIN, K_MAX = 2, 5
-OVERLAY_ALPHA = 0.35  # transparency of the cluster fill
+OVERLAY_ALPHA = 0.45  # transparency of the cluster fill
+
+# Fixed high-contrast palette (up to 5 clusters).
+# Chosen to pop against viridis (dark-blue → yellow) background.
+PALETTE = [
+    (0.95, 0.10, 0.10),   # vivid red
+    (0.10, 0.60, 1.00),   # electric blue
+    (0.10, 0.90, 0.30),   # bright green
+    (1.00, 0.55, 0.00),   # orange
+    (0.85, 0.10, 0.95),   # magenta
+]
 
 
 def cluster_sample(reps, n_paths):
@@ -38,19 +48,19 @@ def run_tsne(reps):
     return TSNE(n_components=2, random_state=42, perplexity=30).fit_transform(reps)
 
 
-def draw_patch_overlay(ax, img_2d, labels, k, cmap):
+def draw_patch_overlay(ax, img_2d, labels, k):
     """Show img_2d with semi-transparent cluster-coloured rectangles + grid lines."""
     ax.imshow(img_2d, aspect='auto', origin='lower', cmap='viridis')
     for i in range(PATCH_GRID):          # array row (i=0 → bottom of display)
         for j in range(PATCH_GRID):      # array col  (j=0 → left of display)
             label = labels[i * PATCH_GRID + j]
-            color = cmap(label / max(k - 1, 1))
+            color = PALETTE[label % len(PALETTE)]
             rect = mpatches.Rectangle(
                 (j * PATCH_SIZE - 0.5, i * PATCH_SIZE - 0.5),
                 PATCH_SIZE, PATCH_SIZE,
                 linewidth=0.4,
                 edgecolor='white',
-                facecolor=color[:3],
+                facecolor=color,
                 alpha=OVERLAY_ALPHA,
             )
             ax.add_patch(rect)
@@ -58,13 +68,12 @@ def draw_patch_overlay(ax, img_2d, labels, k, cmap):
 
 def k_sweep(reps, test_data, idx, ks=(2, 3, 4, 5), out='scripts/segmentation_ksweep.png'):
     """One sample image with overlay repeated for each k value."""
-    cmap = plt.get_cmap('tab10')
     fig, axes = plt.subplots(1, len(ks), figsize=(4 * len(ks), 4))
     rep = reps[idx]
     x   = test_data[idx]
     for ax, k in zip(axes, ks):
         labels = AgglomerativeClustering(n_clusters=k, linkage='ward').fit_predict(rep)
-        draw_patch_overlay(ax, x[0], labels, k, cmap)
+        draw_patch_overlay(ax, x[0], labels, k)
         ax.set_title(f'k = {k}')
         ax.set_xlabel('Azimuth bin')
         ax.set_ylabel('Delay tap')
@@ -91,8 +100,6 @@ def main():
     rng  = np.random.default_rng(args.seed)
     idxs = rng.choice(len(reps), N_SAMPLES, replace=False)
 
-    cmap = plt.get_cmap('tab10')
-
     fig, axes = plt.subplots(N_SAMPLES, 3, figsize=(12, 4 * N_SAMPLES))
 
     for row, idx in enumerate(idxs):
@@ -102,7 +109,7 @@ def main():
 
         labels, k = cluster_sample(rep, k_val)
         tsne_xy   = run_tsne(rep)
-        colours   = [cmap(c / max(k - 1, 1)) for c in labels]
+        colours   = [PALETTE[c % len(PALETTE)] for c in labels]
 
         # Col 0: clean CSI image
         ax0 = axes[row, 0]
@@ -113,7 +120,7 @@ def main():
 
         # Col 1: same image with patch-boundary overlay
         ax1 = axes[row, 1]
-        draw_patch_overlay(ax1, x[0], labels, k, cmap)
+        draw_patch_overlay(ax1, x[0], labels, k)
         ax1.set_xlabel('Azimuth bin')
         ax1.set_ylabel('Delay tap')
         ax1.set_title(f'Patch clusters  k={k}')
