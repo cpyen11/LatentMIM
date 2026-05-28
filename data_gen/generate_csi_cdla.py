@@ -35,7 +35,7 @@ def build_arrays():
     common = dict(
         polarization='single',
         polarization_type='H',
-        antenna_pattern='38.901',
+        antenna_pattern='omni',
         carrier_frequency=CARRIER_FREQUENCY,
     )
     bs_array = AntennaArray(num_rows=1, num_cols=32, **common)
