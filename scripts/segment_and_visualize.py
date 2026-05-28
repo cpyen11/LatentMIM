@@ -50,8 +50,8 @@ def main():
     parser.add_argument('--seed',  type=int, default=0)
     args = parser.parse_args()
 
-    reps      = np.load(args.reps)    # [10000, 256, 384]
-    test_data = np.load(args.data)    # [10000, 2, 64, 64]
+    reps      = np.load(args.reps)    # [10000, 256, 192]
+    test_data = np.load(args.data)    # [10000, 1, 64, 64]  dB magnitude
     n_paths   = np.load(args.paths)   # [10000]
 
     rng  = np.random.default_rng(args.seed)
@@ -71,13 +71,12 @@ def main():
         tsne_xy   = run_tsne(rep)
         colours   = [cmap(c / max(k - 1, 1)) for c in labels]
 
-        # Plot 1: CSI magnitude
-        mag = np.sqrt(x[0] ** 2 + x[1] ** 2)
+        # Plot 1: CSI dB magnitude (single channel)
         ax0 = axes[row, 0]
-        ax0.imshow(mag, aspect='auto', origin='lower', cmap='viridis')
+        ax0.imshow(x[0], aspect='auto', origin='lower', cmap='viridis')
         ax0.set_xlabel('Azimuth bin')
         ax0.set_ylabel('Delay tap')
-        ax0.set_title(f'CSI |H|   n_paths={k_val}')
+        ax0.set_title(f'CSI |H| dB   n_paths={k_val}')
 
         # Plot 2: Segmentation map
         ax1 = axes[row, 1]
