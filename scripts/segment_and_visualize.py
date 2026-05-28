@@ -1,44 +1,59 @@
 # scripts/segment_and_visualize.py
 """
 For 5 random test samples:
-  1. Run AgglomerativeClustering on [256, 384] patch representations
-  2. Upsample 16x16 label map -> 64x64 (nearest neighbour)
+  1. Run AgglomerativeClustering on [256, 192] patch representations
+  2. Overlay cluster-coloured patch boundaries on the original CSI image
   3. Run t-SNE on 256 patch vectors
-  4. Plot row: [CSI magnitude | segmentation map | t-SNE], annotated with n_paths
+  4. Plot row: [CSI |H| dB (clean) | CSI with patch overlay | t-SNE]
 
 Usage:
   python scripts/segment_and_visualize.py \
     --reps   scripts/representations.npy \
     --data   data_gen/csi_cdla/test_data.npy \
     --paths  data_gen/csi_cdla/test_paths.npy \
-    --out    scripts/segmentation_results.png
+    --out    scripts/segmentation.png
 """
 
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 from sklearn.cluster import AgglomerativeClustering
 from sklearn.manifold import TSNE
 
 N_SAMPLES  = 5
 PATCH_GRID = 16
+PATCH_SIZE = 4        # pixels per patch side
 K_MIN, K_MAX = 2, 5
+OVERLAY_ALPHA = 0.35  # transparency of the cluster fill
 
 
-def cluster_sample(reps_256_384, n_paths):
+def cluster_sample(reps, n_paths):
     k = int(np.clip(n_paths, K_MIN, K_MAX))
-    labels = AgglomerativeClustering(n_clusters=k, linkage='ward').fit_predict(reps_256_384)
+    labels = AgglomerativeClustering(n_clusters=k, linkage='ward').fit_predict(reps)
     return labels, k
 
 
-def upsample_labels(labels_256, patch_grid=PATCH_GRID, target=64):
-    label_map = labels_256.reshape(patch_grid, patch_grid)
-    scale = target // patch_grid
-    return np.repeat(np.repeat(label_map, scale, axis=0), scale, axis=1)
+def run_tsne(reps):
+    return TSNE(n_components=2, random_state=42, perplexity=30).fit_transform(reps)
 
 
-def run_tsne(reps_256_384):
-    return TSNE(n_components=2, random_state=42, perplexity=30).fit_transform(reps_256_384)
+def draw_patch_overlay(ax, img_2d, labels, k, cmap):
+    """Show img_2d with semi-transparent cluster-coloured rectangles + grid lines."""
+    ax.imshow(img_2d, aspect='auto', origin='lower', cmap='viridis')
+    for i in range(PATCH_GRID):          # array row (i=0 → bottom of display)
+        for j in range(PATCH_GRID):      # array col  (j=0 → left of display)
+            label = labels[i * PATCH_GRID + j]
+            color = cmap(label / max(k - 1, 1))
+            rect = mpatches.Rectangle(
+                (j * PATCH_SIZE - 0.5, i * PATCH_SIZE - 0.5),
+                PATCH_SIZE, PATCH_SIZE,
+                linewidth=0.4,
+                edgecolor='white',
+                facecolor=color[:3],
+                alpha=OVERLAY_ALPHA,
+            )
+            ax.add_patch(rect)
 
 
 def main():
@@ -46,7 +61,7 @@ def main():
     parser.add_argument('--reps',  default='scripts/representations.npy')
     parser.add_argument('--data',  default='data_gen/csi_cdla/test_data.npy')
     parser.add_argument('--paths', default='data_gen/csi_cdla/test_paths.npy')
-    parser.add_argument('--out',   default='scripts/segmentation_results.png')
+    parser.add_argument('--out',   default='scripts/segmentation.png')
     parser.add_argument('--seed',  type=int, default=0)
     args = parser.parse_args()
 
@@ -67,28 +82,24 @@ def main():
         k_val = int(n_paths[idx])
 
         labels, k = cluster_sample(rep, k_val)
-        label_map = upsample_labels(labels)
         tsne_xy   = run_tsne(rep)
         colours   = [cmap(c / max(k - 1, 1)) for c in labels]
 
-        # Plot 1: CSI dB magnitude (single channel)
+        # Col 0: clean CSI image
         ax0 = axes[row, 0]
         ax0.imshow(x[0], aspect='auto', origin='lower', cmap='viridis')
         ax0.set_xlabel('Azimuth bin')
         ax0.set_ylabel('Delay tap')
         ax0.set_title(f'CSI |H| dB   n_paths={k_val}')
 
-        # Plot 2: Segmentation map
+        # Col 1: same image with patch-boundary overlay
         ax1 = axes[row, 1]
-        seg_rgb = np.array([[cmap(c / max(k - 1, 1))[:3]
-                              for c in row_vals]
-                             for row_vals in label_map])
-        ax1.imshow(seg_rgb, aspect='auto', origin='lower')
+        draw_patch_overlay(ax1, x[0], labels, k, cmap)
         ax1.set_xlabel('Azimuth bin')
         ax1.set_ylabel('Delay tap')
-        ax1.set_title(f'Segmentation  k={k}')
+        ax1.set_title(f'Patch clusters  k={k}')
 
-        # Plot 3: t-SNE
+        # Col 2: t-SNE
         ax2 = axes[row, 2]
         ax2.scatter(tsne_xy[:, 0], tsne_xy[:, 1], c=colours, s=8, alpha=0.8)
         ax2.set_title('t-SNE  (colour = cluster)')
