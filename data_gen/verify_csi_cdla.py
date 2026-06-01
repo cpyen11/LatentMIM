@@ -29,14 +29,20 @@ def main():
     rng = np.random.default_rng(0)
     idxs = rng.choice(len(train), 3, replace=False)
 
+    PATCH_SIZE = 4
+
     fig, axes = plt.subplots(3, 1, figsize=(8, 10))
     for row, idx in enumerate(idxs):
         mag_db = train[idx, 0]   # [64, 64] already in dB
         ax = axes[row]
         im = ax.imshow(mag_db, aspect='auto', origin='lower', cmap='viridis')
+        # Patch boundary grid lines
+        for p in range(0, 64, PATCH_SIZE):
+            ax.axhline(p - 0.5, color='white', linewidth=0.5, alpha=0.6)
+            ax.axvline(p - 0.5, color='white', linewidth=0.5, alpha=0.6)
         ax.set_xlabel('Azimuth bin')
         ax.set_ylabel('Delay tap')
-        ax.set_title(f'Sample {idx}  |  n_paths={train_paths[idx]}')
+        ax.set_title(f'Sample {idx}  |  n_paths={train_paths[idx]}  |  patch={PATCH_SIZE}×{PATCH_SIZE}px')
         plt.colorbar(im, ax=ax, label='|H| (dB)')
 
     plt.tight_layout()

@@ -84,8 +84,10 @@ def main_worker(local_rank, args):
     cudnn.benchmark = True
 
     train_transform, eval_transform = build_transforms(args)
+    max_samples = getattr(args, 'max_train_samples', None)
     db_train = datasets.load_dataset(
-        args.dataset, args.data_path, transform=train_transform, train=True)
+        args.dataset, args.data_path, transform=train_transform, train=True,
+        max_samples=max_samples)
     db_eval  = datasets.load_dataset(
         args.dataset, args.data_path, transform=eval_transform,  train=False)
 

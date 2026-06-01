@@ -9,9 +9,9 @@ job_name: latentMIM_csi
 dataset: csi_cdla
 data_path: data_gen/csi_cdla
 
-encoder: vit_tiny
+encoder: vit_small
 in_chans: 1
-patch_size: 4
+patch_size: 2
 decoder_depth: 3
 target_depth: 12
 target_mom: 0.99
@@ -26,8 +26,8 @@ drop_path: 0.
 
 input_size: 64
 min_crop: 1.0
-grid_size: 16
-num_vis: 25
+grid_size: [20, 32]
+num_vis: 192
 patch_gap: 0
 avg_vis_mask_token: True
 avg_sim_coeff: 0.1
@@ -40,13 +40,15 @@ proj:
   mlp_dim: 4096
   mlp_depth: 3
 
+max_train_samples: 70000
+
 epochs: 200
 warmup_epochs: 20
 start_epoch: 0
-batch_size: 128
+batch_size: 64
 weight_decay: 0.05
 blr: 1.5e-4
-accum_iter: 1
+accum_iter: 2
 lr:
 min_lr_frac: 0.25
 resume: True
@@ -55,6 +57,6 @@ knn_eval_only: False
 eval_freq: 10
 
 log:
-  print_freq: 547
-  save_freq: 20
+  print_freq: 625
+  save_freq: 100
   use_wandb: False

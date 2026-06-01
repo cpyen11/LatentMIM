@@ -89,26 +89,29 @@ def imagenet100(data_path, transform, train=True):
 
 
 class CSICDLADataset(data.Dataset):
-    def __init__(self, data_path, train=True):
+    def __init__(self, data_path, train=True, max_samples=None):
         split = 'train' if train else 'test'
-        self.data    = np.load(os.path.join(data_path, f'{split}_data.npy'))   # [N, 2, 64, 64]
+        self.data    = np.load(os.path.join(data_path, f'{split}_data.npy'))   # [N, 1, 64, 64]
         self.n_paths = np.load(os.path.join(data_path, f'{split}_paths.npy'))  # [N]
+        if max_samples is not None and train:
+            self.data    = self.data[:max_samples]
+            self.n_paths = self.n_paths[:max_samples]
 
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, idx):
-        x = self.data[idx].astype(np.float32)   # [1, 64, 64] dB magnitude
-        x = (x - x.mean()) / (x.std() + 1e-8)  # per-sample standardisation
+        x = self.data[idx, :, :40, :].astype(np.float32)   # [1, 40, 64] crop delay > 40
+        x = (x - x.mean()) / (x.std() + 1e-8)
         return torch.from_numpy(x), int(self.n_paths[idx])
 
 
-def csi_cdla(data_path, transform=None, train=True):
-    return CSICDLADataset(data_path, train=train)
+def csi_cdla(data_path, transform=None, train=True, max_samples=None):
+    return CSICDLADataset(data_path, train=train, max_samples=max_samples)
 
 
-def load_dataset(dataset, path, transform, train=True):
-    return globals()[dataset](path, transform, train)
+def load_dataset(dataset, path, transform, train=True, max_samples=None):
+    return globals()[dataset](path, transform, train, max_samples=max_samples)
 
 
 from util import misc

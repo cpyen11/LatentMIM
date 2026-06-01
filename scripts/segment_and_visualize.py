@@ -1,7 +1,7 @@
 # scripts/segment_and_visualize.py
 """
 For 5 random test samples:
-  1. Run AgglomerativeClustering on [256, 192] patch representations
+  1. Run AgglomerativeClustering (cosine+average) on [640, 384] patch representations
   2. Overlay cluster-coloured patch boundaries on the original CSI image
   3. Run t-SNE on 256 patch vectors
   4. Plot row: [CSI |H| dB (clean) | CSI with patch overlay | t-SNE]
@@ -22,8 +22,9 @@ from sklearn.cluster import AgglomerativeClustering
 from sklearn.manifold import TSNE
 
 N_SAMPLES  = 5
-PATCH_GRID = 16
-PATCH_SIZE = 4        # pixels per patch side
+PATCH_GRID_H = 20     # delay rows  (40 taps / patch_size 2)
+PATCH_GRID_W = 32     # azimuth cols (64 bins  / patch_size 2)
+PATCH_SIZE   = 2      # pixels per patch side
 K_MIN, K_MAX = 2, 5
 OVERLAY_ALPHA = 0.45  # transparency of the cluster fill
 
@@ -40,7 +41,7 @@ PALETTE = [
 
 def cluster_sample(reps, n_paths):
     k = int(np.clip(n_paths, K_MIN, K_MAX))
-    labels = AgglomerativeClustering(n_clusters=k, linkage='ward').fit_predict(reps)
+    labels = AgglomerativeClustering(n_clusters=k, metric='cosine', linkage='average').fit_predict(reps)
     return labels, k
 
 
@@ -51,9 +52,9 @@ def run_tsne(reps):
 def draw_patch_overlay(ax, img_2d, labels, k):
     """Show img_2d with semi-transparent cluster-coloured rectangles + grid lines."""
     ax.imshow(img_2d, aspect='auto', origin='lower', cmap='viridis')
-    for i in range(PATCH_GRID):          # array row (i=0 → bottom of display)
-        for j in range(PATCH_GRID):      # array col  (j=0 → left of display)
-            label = labels[i * PATCH_GRID + j]
+    for i in range(PATCH_GRID_H):        # array row (i=0 → bottom of display)
+        for j in range(PATCH_GRID_W):    # array col  (j=0 → left of display)
+            label = labels[i * PATCH_GRID_W + j]
             color = PALETTE[label % len(PALETTE)]
             rect = mpatches.Rectangle(
                 (j * PATCH_SIZE - 0.5, i * PATCH_SIZE - 0.5),
@@ -72,7 +73,7 @@ def k_sweep(reps, test_data, idx, ks=(2, 3, 4, 5), out='scripts/segmentation_ksw
     rep = reps[idx]
     x   = test_data[idx]
     for ax, k in zip(axes, ks):
-        labels = AgglomerativeClustering(n_clusters=k, linkage='ward').fit_predict(rep)
+        labels = AgglomerativeClustering(n_clusters=k, metric='cosine', linkage='average').fit_predict(rep)
         draw_patch_overlay(ax, x[0], labels, k)
         ax.set_title(f'k = {k}')
         ax.set_xlabel('Azimuth bin')

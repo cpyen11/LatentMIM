@@ -25,15 +25,15 @@ def load_model(ckpt_path, device):
     ckpt = torch.load(ckpt_path, map_location='cpu')
     proj_cfg = types.SimpleNamespace(mlp_dim=4096, mlp_depth=3)
     model = build_lmim(
-        'vit_tiny',
-        patch_size=4,
+        'vit_small',
+        patch_size=2,
         in_chans=1,
-        grid_size=16,
+        grid_size=(20, 32),
         loss='infonce_patches',
         tau=0.2,
         target_depth=12,
         decoder_depth=3,
-        num_vis=25,
+        num_vis=192,
         avg_sim_coeff=0.0,
         avg_vis_mask_token=True,
         drop=0., attn_drop=0., drop_path=0.,
@@ -75,7 +75,7 @@ def main():
 
     print(f'Extracting representations for {len(test_ds)} test samples...')
     reps = extract(model, loader, device)
-    assert reps.shape == (len(test_ds), 256, 192), f'unexpected shape: {reps.shape}'
+    assert reps.shape == (len(test_ds), 640, 384), f'unexpected shape: {reps.shape}'
     print(f'Representations shape: {reps.shape}')
 
     np.save(args.out, reps)

@@ -161,3 +161,9 @@ output_dir/
 
 # hydra
 .hydra/
+
+# generated data and large files
+data_gen/csi_cdla/
+data_gen/*.png
+scripts/*.npy
+scripts/*.png

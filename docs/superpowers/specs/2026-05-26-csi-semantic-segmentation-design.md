@@ -24,9 +24,9 @@
 ### Normalisation
 Per-sample normalisation using joint complex magnitude:
 
-$$P = \sqrt{\frac{1}{N}\sum_{i,j}(\text{real}_{ij}^2 + \text{imag}_{ij}^2)}$$
+`P = \sqrt{\frac{1}{N}\sum_{i,j}(\text{real}_{ij}^2 + \text{imag}_{ij}^2)}`
 
-Divide **both** real and imaginary channels by $P$. This preserves phase and relative amplitudes across delay-azimuth bins while removing per-sample power variation.
+Divide **both** real and imaginary channels by `P`. This preserves phase and relative amplitudes across delay-azimuth bins while removing per-sample power variation.
 
 ### Dataset split
 - Total samples: 80,000
