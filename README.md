@@ -10,8 +10,10 @@
 *[Simon Note]* The experiment found out that tyring to apply LatentMIM to extract semantic information from CSI-image (delay/angular-domain) failed. I originally hope to see that at least for k=2 unsupervised sementation, noise and paths can be successfully segmented, i.e. the embedding of patches contain paths and those contain noise only should be embeded into 2 clusters that are far from each other in the latent space. However, the CSI-image in delay/augular domain is sparse, i.e. only several patches contain significant paths where most pathces only contain noise. I conjecture that due the the MAE style masking strategy, it is hard to learn meaningful semantics from the visible patches and this cause the failure.
 
 *[Future Study]*
+
 _Option-1_: Maybe a well crafted masking strategy can help. Switch to I-JEPA. First, pick patches have high average power as target windows, then the rest are Context Windows. And hopefully that the Context Window containts global path information and it may contain energy leakage so that the predictor can use to predict the patches contain significant paths. [https://gemini.google.com/share/1be1e177320a]
-_Option-2_: Switch to DINO in which multi-view crop that include global view and local views and not masking the image are used. The Teacher/Student training framework may guide the encoder to predict sparse paths.
+
+_Option-2_: Switch to DINO (or LeJEPA) in which multi-view crop that include global view and local views and not masking the image are used in training. The Teacher/Student training framework may guide the encoder to predict sparse paths.
 
 ## Overview
 
